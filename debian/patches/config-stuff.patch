@@ -1,0 +1,173 @@
+Description: migration to automake 1.13
+ Automake 1.13 breaks many configurations which were based on obsoleted constructs
+ This migrations was mostly based on the use of 'gettextize -f' after updating
+ Gettext to the latest version. Other modifications have been driven by warnings
+ issued by autoreconf (more precisely by automake, which is called by autoreconf)
+ .
+ This patch contains all the modifications which make the package buildable in
+ a recent environment.
+ .
+ Another change was made on 2021-10-26: applied `autoupdate` to get rid
+ of recently obsoleted constructs.
+
+Index: partclone/configure.ac
+===================================================================
+--- partclone.orig/configure.ac
++++ partclone/configure.ac
+@@ -1,4 +1,4 @@
+-AC_INIT([Partclone], [0.3.17], [thomas@nchc.org.tw])
++AC_INIT([Partclone],[0.3.17],[thomas@nchc.org.tw])
+ AM_INIT_AUTOMAKE([-Wall foreign])
+ AM_GNU_GETTEXT_VERSION([0.18.2])
+ AM_GNU_GETTEXT([external])
+@@ -15,6 +15,9 @@ AC_SYS_LARGEFILE
+ # Enable per-target flags
+ AM_PROG_CC_C_O
+ 
++# Enable per-target flags
++AM_PROG_CC_C_O
++
+ # default value##
+ supported_fs=""
+ 
+@@ -65,7 +68,7 @@ AC_ARG_ENABLE([fuse],
+ )
+ AM_CONDITIONAL(ENABLE_FUSE, test "$enable_fuse" = yes)
+ if test "$enable_fuse" = "yes"; then
+-AC_CHECKING([ for FUSE Library and Header files ... ])
++AS_MESSAGE([checking  for FUSE Library and Header files ... ...])
+     PKG_CHECK_MODULES([FUSE], [fuse],,exit)
+     uuidcfg=`pkg-config --cflags --libs fuse`
+ fi
+@@ -84,7 +87,7 @@ AM_CONDITIONAL(ENABLE_EXTFS, test "$enab
+ if test "$enable_extfs" = "yes"; then
+ #check library of some filesystems
+ dnl Check for EXT2/3
+-AC_CHECKING([ for EXT2/3 Library and Header files ... ])
++AS_MESSAGE([checking  for EXT2/3 Library and Header files ... ...])
+ AC_CHECK_HEADERS([ext2fs/ext2fs.h], ,
+   AC_MSG_ERROR([*** EXT2/3 header files (ext2fs/ext2fs.h) not found])
+ )
+@@ -123,7 +126,7 @@ AM_CONDITIONAL(ENABLE_REISERFS, test "$e
+ if test "$enable_reiserfs" = "yes"; then
+ 
+ dnl Check for REISERFS
+-AC_CHECKING([ for Reiserfs Library and Header files ... ])
++AS_MESSAGE([checking  for Reiserfs Library and Header files ... ...])
+ AC_CHECK_HEADERS([reiserfs/reiserfs.h], ,
+     AC_MSG_ERROR([*** reiserfs header files (reiserfs/reiserfs.h) not found])
+ )
+@@ -150,7 +153,7 @@ if test "$enable_reiser4" = "yes"; then
+ 
+ dnl Check for REISER4
+ dnl Check uuid library which depended by REISER4
+-AC_CHECKING([ for Reiser4 Library and Header files ... ])
++AS_MESSAGE([checking  for Reiser4 Library and Header files ... ...])
+ AC_CHECK_HEADERS([reiser4/libreiser4.h], ,
+   AC_MSG_ERROR([*** reiser4 header files (reiser4/libreiser4.h) not found])
+ )
+@@ -241,7 +244,7 @@ AM_CONDITIONAL(ENABLE_NILFS2, test "$ena
+ 
+ if test "$enable_nilfs2" = "yes"; then
+ dnl Check headers which depended by NILFS2
+-AC_CHECKING([ for NILFS2 header files ... ])
++AS_MESSAGE([checking  for NILFS2 header files ... ...])
+ AC_CHECK_HEADERS([ctype.h fcntl.h grp.h libintl.h limits.h linux/magic.h \
+ 		  linux/types.h locale.h mntent.h mqueue.h paths.h pwd.h \
+ 		  semaphore.h stdlib.h string.h strings.h sys/ioctl.h \
+@@ -273,14 +276,14 @@ if test "$enable_ntfs" = "yes"; then
+     ntfsprogs_l=0
+     #check library of some filesystems
+     dnl Check for NTFS-3g
+-    AC_CHECKING([ for NTFS-3g Library and Header files ... ])
++    AS_MESSAGE([checking  for NTFS-3g Library and Header files ... ...])
+     AC_CHECK_HEADERS([ntfs-3g/misc.h], ntfs_3g_h=1,
+     AC_MSG_WARN([*** NTFS(libntfs-3g-dev) header not found]))
+     AC_CHECK_LIB([ntfs-3g], [ntfs_mount], ntfs_3g_l=1,
+     AC_MSG_WARN([*** ntfs depend library (libntfs-3g) not found]))
+ 
+     dnl Check for NTFSPROGS
+-    AC_CHECKING([ for NTFS Library and Header files ... ])
++    AS_MESSAGE([checking  for NTFS Library and Header files ... ...])
+     AC_CHECK_HEADERS([ntfs/version.h], ntfsprogs_h=1,
+     AC_MSG_WARN([*** NTFS(ntfsprogs) header not found]))
+     AC_CHECK_LIB([ntfs], [ntfs_mount], ntfsprogs_l=1,
+@@ -313,7 +316,7 @@ if test "$enable_ufs" = "yes"; then
+ #check library of some filesystems
+ 
+ dnl Check for UFS 
+-AC_CHECKING([ for UFS Library ... ])
++AS_MESSAGE([checking  for UFS Library ... ...])
+ AC_CHECK_LIB([ufs], [ufs_disk_fillout], true,
+         AC_MSG_ERROR([*** ufs depend library (libufs2) not found]))
+ supported_fs=$supported_fs" ufs"
+@@ -333,10 +336,10 @@ if test "$enable_vmfs" = "yes"; then
+ #check library of some filesystems
+ 
+ dnl Check for VMFS 
+-##AC_CHECKING([ for VMFS Library and Header files ... ])
++##AS_MESSAGE([checking  for VMFS Library and Header files ... ...])
+ ##AC_CHECK_HEADERS([uuid/uuid.h vmfs/vmfs.h], ,
+ ##   AC_MSG_ERROR([*** VMFS(vmfs-tools) header not found]))
+-AC_CHECKING([for VMFS Library files ... ])
++AS_MESSAGE([checking for VMFS Library files ... ...])
+ AC_CHECK_LIB([vmfs -luuid], [vmfs_host_init], true,
+         AC_MSG_ERROR([*** vmfs depend library (libvmfs) not found]))
+ supported_fs=$supported_fs" vmfs"
+@@ -356,10 +359,10 @@ if test "$enable_jfs" = "yes"; then
+ #check library of some filesystems
+ 
+ dnl Check for JFS 
+-##AC_CHECKING([ for JFS Library and Header files ... ])
++##AS_MESSAGE([checking  for JFS Library and Header files ... ...])
+ ##AC_CHECK_HEADERS([uuid/uuid.h jfs/jfs_superblock.h], ,
+ ##   AC_MSG_ERROR([*** JFS(libjfs) header not found]))
+-AC_CHECKING([for JFS Library files ... ])
++AS_MESSAGE([checking for JFS Library files ... ...])
+ AC_CHECK_LIB([jfs -luuid], [ujfs_get_superblk], true,
+         AC_MSG_ERROR([*** jfs depend library (libjfs) not found]))
+ supported_fs=$supported_fs" jfs"
+@@ -410,7 +413,7 @@ AM_CONDITIONAL(ENABLE_NCURSESW, test "$e
+ if test "$enable_ncursesw" = "yes"; then
+ 
+ dnl Check for NCURSESW
+-AC_CHECKING([ for Ncursesw Library and Header files ... ])
++AS_MESSAGE([checking  for Ncursesw Library and Header files ... ...])
+ AC_CHECK_HEADERS([ncurses.h], ,
+     AC_MSG_ERROR([*** ncurses header files (ncurses.h) not found])
+ )
+Index: partclone/config.rpath
+===================================================================
+--- partclone.orig/config.rpath
++++ partclone/config.rpath
+@@ -672,6 +672,12 @@ libname_spec="$escaped_libname_spec"
+ # Library names that the linker finds when passed -lNAME.
+ library_names_spec="$escaped_library_names_spec"
+ 
++# Format of library name prefix.
++libname_spec="$escaped_libname_spec"
++
++# Library names that the linker finds when passed -lNAME.
++library_names_spec="$escaped_library_names_spec"
++
+ # Flag to hardcode \$libdir into a binary during linking.
+ # This must work even if \$libdir does not exist.
+ hardcode_libdir_flag_spec="$escaped_hardcode_libdir_flag_spec"
+Index: partclone/po/Makefile.in.in
+===================================================================
+--- partclone.orig/po/Makefile.in.in
++++ partclone/po/Makefile.in.in
+@@ -108,6 +108,13 @@ CHECK_MACRO_VERSION = \
+ 	       exit 1; \
+ 	     }
+ 
++# Ensure that the gettext macros and this Makefile.in.in are in sync.
++CHECK_MACRO_VERSION = \
++	test "$(GETTEXT_MACRO_VERSION)" = "@GETTEXT_MACRO_VERSION@" \
++	  || { echo "*** error: gettext infrastructure mismatch: using a Makefile.in.in from gettext version $(GETTEXT_MACRO_VERSION) but the autoconf macros are from gettext version @GETTEXT_MACRO_VERSION@" 1>&2; \
++	       exit 1; \
++	     }
++
+ # $(srcdir)/$(DOMAIN).pot is only created when needed. When xgettext finds no
+ # internationalized messages, no $(srcdir)/$(DOMAIN).pot is created (because
+ # we don't want to bother translators with empty POT files). We assume that

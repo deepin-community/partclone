@@ -1,0 +1,5 @@
+# these files can be built only on Intel-like processors
+fail-mbr/fail-mbr.bin
+debian/fail-mbr.bin
+fail-mbr/fail-mbr.o
+fail-mbr/fail-mbr.image

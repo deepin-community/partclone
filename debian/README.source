@@ -1,0 +1,15 @@
+partclone for Debian
+--------------------
+
+The source is retrieved from 
+http://sourceforge.net/projects/partclone with uscan (see debian/watch)
+
+Modifications are managed by quilt, see /usr/share/doc/quilt/README.source
+
+During the compilation, the file fail-mbr/fail-mbr.bin is compiled only if
+the architecture is amd64 or i386. If that compilation fails, that means that
+the upstream file fail-mbr/fail-mbr.bin.orig has been significantly altered.
+For other architectures, the build will not be done, and an always
+successful copy is made to get fail-mbr/fail-mbr.bin
+
+ -- Georges Khaznadar <georgesk@debian.org>, Wed May 13 15:46:17 CEST 2015
