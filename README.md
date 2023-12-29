@@ -26,8 +26,6 @@ We made some utilities:
 * partclone.dd
 ...
 
-master branch is NOT STABLE, Please check 'release' branch
-
 Basic Usage:
 
  - clone partition to image
@@ -49,5 +47,9 @@ Basic Usage:
  - check image
 
     `partclone.chkimg -s sda1.img`
+
+Limitations:
+
+  - Filesystem being backedup must be unmounted and inaccessible to other programs.
 
 For more info about partclone, check our website http://partclone.org or github-wiki.

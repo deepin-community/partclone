@@ -181,7 +181,12 @@ void info_options ()
     opt.info = 1;
     opt.source = image_file;
 }
-static void *main_init(struct fuse_conn_info *conn, struct fuse_config *cfg)
+
+static void *main_init(struct fuse_conn_info *conn
+#if FUSE_MAJOR_VERSION >= 3
+    , struct fuse_config *cfg
+#endif
+)
 {
 
     (void) conn;
@@ -294,6 +299,9 @@ static struct fuse_operations ptl_fuse_operations =
 
 int main(int argc, char *argv[])
 {
+    if (argc < 2) {
+        info_usage(); // Never returns.
+    }
     image_file = realpath(argv[argc-2], NULL);
     argv[argc-2] = argv[argc-1];
     argv[argc-1] = NULL;

@@ -1,15 +1,27 @@
 Source: partclone
 Section: admin
 Priority: optional
-Maintainer: Deepin Developer <deepin-dev@deepin.org>
-Build-Depends: debhelper (>= 11), quilt, dh-autoreconf,
+Maintainer: Georges Khaznadar <georgesk@debian.org>
+Build-Depends: debhelper-compat (= 13),
  gettext,
- e2fslibs-dev, xfslibs-dev,
- libreiser4-dev, libaal-dev,
- libbsd-dev, libncursesw5-dev, ntfs-3g-dev, vmfs-tools, nilfs-tools,
- libblkid-dev, pkg-config, xsltproc, docbook-xsl,
- libssl-dev
-Standards-Version: 4.3.0
+ e2fslibs-dev,
+ xfslibs-dev,
+ libreiser4-dev,
+ ntfs-3g-dev,
+ libaal-dev,
+ libbsd-dev,
+ libncursesw5-dev,
+ vmfs-tools,
+ nilfs-tools,
+ libblkid-dev,
+ pkg-config,
+ xsltproc,
+ docbook-xsl,
+ libssl-dev,
+ libmount-dev
+Standards-Version: 4.6.1
+Vcs-Browser: https://salsa.debian.org/georgesk/partclone
+Vcs-Git: https://salsa.debian.org/georgesk/partclone.git
 Homepage: http://partclone.org/
 
 Package: partclone

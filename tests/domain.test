@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-. _common
+. "$(dirname "$0")"/_common
 ## file system
 fs="ext3"
 dd_count=$normal_size
@@ -51,5 +51,5 @@ _check_return_code
 echo -e "\nddrescue domain logfile test ok\n"
 echo -e "\nclear tmp files $img $raw $logfile $md5 $ddraw\n"
 _ptlbreak
-#rm -f $img $raw $logfile $md5 $ddraw
+rm -f $img $raw $logfile $md5 $ddraw
 

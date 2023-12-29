@@ -1,0 +1,3 @@
+# this file is built from the source file src/xfs/libxfs/crc32.c
+# it should be dleted from the source package at the newt version's download
+partclone source: source-is-missing src/xfs/libxfs/crc32selftest

@@ -262,7 +262,7 @@ static void fs_open(char* device)
     if ((source_fd = open(device, open_flags)) < 0)  {
 	log_mesg(0, 1, 1, fs_opt.debug, "%s: Couldn't open source partition %s\n", __FILE__, device);
     }else{
-	log_mesg(0, 0, 0, fs_opt.debug, "%s: Open %s successfully", __FILE__, device);
+	log_mesg(0, 0, 0, fs_opt.debug, "%s: Open %s successfully\n", __FILE__, device);
 	}
 
     if (fstat(source_fd, &statbuf) < 0)  {
@@ -350,11 +350,13 @@ void read_super_blocks(char* device, file_system_info* fs_info)
     fs_info->block_size  = mp->m_sb.sb_blocksize;
     fs_info->totalblock  = mp->m_sb.sb_dblocks;
     fs_info->usedblocks  = mp->m_sb.sb_dblocks - mp->m_sb.sb_fdblocks;
+    fs_info->superBlockUsedBlocks = fs_info->usedblocks;
     fs_info->device_size = fs_info->totalblock * fs_info->block_size;
     log_mesg(1, 0, 0, fs_opt.debug, "%s: blcos size= %i\n", __FILE__, mp->m_sb.sb_blocksize);
     log_mesg(1, 0, 0, fs_opt.debug, "%s: total b= %lli\n", __FILE__, mp->m_sb.sb_dblocks);
     log_mesg(1, 0, 0, fs_opt.debug, "%s: free block= %lli\n", __FILE__, mp->m_sb.sb_fdblocks);
     log_mesg(1, 0, 0, fs_opt.debug, "%s: used block= %lli\n", __FILE__, (mp->m_sb.sb_dblocks - mp->m_sb.sb_fdblocks));
+    log_mesg(1, 0, 0, fs_opt.debug, "%s: superBlockUsedBlocks= %lli\n", __FILE__, fs_info->superBlockUsedBlocks);
     log_mesg(1, 0, 0, fs_opt.debug, "%s: device size= %lli\n", __FILE__, (mp->m_sb.sb_blocksize*mp->m_sb.sb_dblocks));
     fs_close();
 

@@ -1,10 +1,10 @@
 #!/bin/bash
 
 break_debug=0
-logfile='test.log'
-img='floppy.img'
-raw='floppy.raw'
-raw_restore='floppy_restore.raw'
+logfile="$$_test.log"
+img="$$_floppy.img"
+raw="$$_floppy.raw"
+raw_restore="$$_floppy_restore.raw"
 dd_bs=1024
 normal_size=$((256*1*256))
 floppy_size=1024
@@ -27,6 +27,8 @@ mkfs_option_for_btrfs='-f'
 mkfs_option_for_fat12='-F 12'
 mkfs_option_for_fat16='-F 16'
 mkfs_option_for_fat32='-F 32'
+mkfs_option_for_f2fs='-f'
+mkfs_option_for_nilfs2='-f'
 #mkfs_option_for_minix='-3'
 
 ## file system
@@ -77,6 +79,12 @@ _test_size(){
 	fat32|fat|vfat)
 	    normal_size=$((1024*128))
 	;;
+	f2fs)
+	    normal_size=$((1024*128))
+	;;
+	xfs)
+	    normal_size=$((1024*384))
+	;;
     esac
 
     echo $normal_size
@@ -92,11 +100,12 @@ _findmkfs(){
     esac
 
     locate_path=$(type -P locate)
-    if [ -z $locate_path ]; then
-        locate_path="which"
+    if [ -n $locate_path ]; then
+        mkfs_path=$($locate_path mkfs.$fs|grep sbin| sort -n -r |head -n 1)
     fi
-
-    mkfs_path=$($locate_path mkfs.$fs|grep sbin| sort -n -r |head -n 1)
+    if [ -z $mkfs_path ]; then
+        mkfs_path=$(which mkfs.$fs)
+    fi
     if [ -z $mkfs_path ]; then
 	echo  >&2 "can't find mkfs.$fs"
 	exit 1

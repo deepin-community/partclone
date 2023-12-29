@@ -49,7 +49,7 @@ man(1), man(7), http://www.tldp.org/HOWTO/Man-Page/
   <!ENTITY dhsurname   "Tsai">
   <!-- dhusername could also be set to "&dhfirstname; &dhsurname;". -->
   <!ENTITY dhusername  "Yu-Chin Tsai">
-  <!ENTITY dhemail     "thomas@nchc.org.tw">
+  <!ENTITY dhemail     "thomas@clonezilla.org">
   <!-- SECTION should be 1-8, maybe w/ subsection other parameters are
        allowed: see man(7), man(1) and
        http://www.tldp.org/HOWTO/Man-Page/q2.html. -->
@@ -159,10 +159,6 @@ man(1), man(7), http://www.tldp.org/HOWTO/Man-Page/
 	<arg choice="plain"><option>--ignore_crc</option></arg>
 	</group>
 	<group choice="opt">
-	    <arg choice="plain"><option>-X</option></arg>
-	    <arg choice="plain"><option>--dialog</option></arg>
-	</group>
-	<group choice="opt">
 	    <arg choice="plain"><option>-C</option></arg>
 	    <arg choice="plain"><option>--nocheck</option></arg>
 	</group>
@@ -175,7 +171,33 @@ man(1), man(7), http://www.tldp.org/HOWTO/Man-Page/
 	    <arg choice="plain"><option>--logfile</option></arg>
 	</group>
 	<replaceable class="option">logfile</replaceable>
-
+	<group choice="opt">
+	    <arg choice="plain"><option>-w</option></arg>
+	    <arg choice="plain"><option>--skip_write_error</option></arg>
+	</group>
+	<group choice="opt">
+	    <arg choice="plain"><option>--write-direct-io</option></arg>
+	</group>
+	<group choice="opt">
+	    <arg choice="plain"><option>-w</option></arg>
+	    <arg choice="plain"><option>--skip_write_error</option></arg>
+	</group>
+	<group choice="opt">
+	    <arg choice="plain"><option>-E</option></arg>
+	    <arg choice="plain"><option>--offset=X</option></arg>
+	</group>
+	<group choice="opt">
+	    <arg choice="plain"><option>-T</option></arg>
+	    <arg choice="plain"><option>--btfiles</option></arg>
+	</group>
+	<group choice="opt">
+	    <arg choice="plain"><option>-t</option></arg>
+	    <arg choice="plain"><option>--btfiles_torrent</option></arg>
+	</group>
+	<group choice="opt">
+	    <arg choice="plain"><option>-B</option></arg>
+	    <arg choice="plain"><option>--no_block_detail</option></arg>
+	</group>
 	</arg>
      
     </cmdsynopsis>
@@ -184,7 +206,7 @@ man(1), man(7), http://www.tldp.org/HOWTO/Man-Page/
     <title>DESCRIPTION</title>
     <para><command>&dhpackage;</command> is a part of <command>Partclone</command> project to restore all image made from partclone.[fstype] or partclone.dd.
     Partclone provide utilities to backup used blocks and design for higher compatibility of the file system by using existing library, e.g. e2fslibs is used to read the used block of ext2 partition.</para>
-    <para><command>Partclone</command> supported file system include btrfs, ext2, ext3, ext4, reiserfs, reiser4, xfs and jfs for LINUX. Also  support some non-linux operation system, ex: NTFS, FAT, EXFAT(for Windows), HFS plus(APPLE MAC OS), UFS2(FreeBSD), VMFS(VMWare Vsphere). All partclone utils could be run like partclone.xxx is very smiliar fsck or mkfs. For example, for backup/restore hfsplus, just run partclone.hfsp.
+    <para><command>Partclone</command> supported file system include btrfs, ext2, ext3, ext4, reiserfs, reiser4, xfs and jfs for LINUX. Also  support some non-linux operation system, ex: NTFS, FAT, EXFAT (for Windows), HFS plus (APPLE MAC OS), UFS2 (FreeBSD), VMFS (VMWare Vsphere). All partclone utils could be run like partclone.xxx is very smiliar fsck or mkfs. For example, for backup/restore hfsplus, just run partclone.hfsp.
     </para>
      </refsect1>
   <refsect1 id="options">
@@ -200,7 +222,7 @@ man(1), man(7), http://www.tldp.org/HOWTO/Man-Page/
         <term><option>-s <replaceable>FILE</replaceable></option></term>
         <term><option>--source <replaceable>FILE</replaceable></option></term>
         <listitem>
-          <para>Source FILE. The FILE could be a image file(made by partclone) or device depend on your action. Normally, backup source is device, restore source is image file.</para>
+          <para>Source FILE. The FILE could be a image file (made by partclone) or device depend on your action. Normally, backup source is device, restore source is image file.</para>
           <para>Receving data from pipe line is supported ONLY for restoring, just ignore -s option or use '-' means receive data from stdin.</para>
         </listitem>
       </varlistentry>
@@ -208,7 +230,7 @@ man(1), man(7), http://www.tldp.org/HOWTO/Man-Page/
         <term><option>-o <replaceable>FILE</replaceable></option></term>
         <term><option>--output <replaceable>FILE</replaceable></option></term>
         <listitem>
-          <para>Output FILE. The FILE could be a image file(partclone will generate) or device depend on your action. Normally, backup output to image file and restore output to device.</para>
+          <para>Output FILE. The FILE could be a image file (partclone will generate) or device depend on your action. Normally, backup output to image file and restore output to device.</para>
 	  <para>Sending data to pipe line is also supported ONLY for back-up, just ignore -o option or use '-' means send data to stdout.</para>
         </listitem>
       </varlistentry>
@@ -226,10 +248,10 @@ man(1), man(7), http://www.tldp.org/HOWTO/Man-Page/
         </listitem>
       </varlistentry>
       <varlistentry>
-        <term><option>-l <replaceable>FILE</replaceable></option></term>
+        <term><option>-L <replaceable>FILE</replaceable></option></term>
         <term><option>--logfile <replaceable>FILE</replaceable></option></term>
         <listitem>
-          <para>put special path to record partclone log information.(default /var/log/partclone.log)</para>
+          <para>put special path to record partclone log information. (default /var/log/partclone.log)</para>
         </listitem>
       </varlistentry>
       <varlistentry>
@@ -248,7 +270,7 @@ man(1), man(7), http://www.tldp.org/HOWTO/Man-Page/
       </varlistentry>
       <varlistentry>
         <term><option>-N</option></term>
-        <term><option>--ncurse</option></term>
+        <term><option>--ncurses</option></term>
         <listitem>
           <para>Using Ncurses Text User Interface.</para>
         </listitem>
@@ -341,7 +363,7 @@ man(1), man(7), http://www.tldp.org/HOWTO/Man-Page/
  restore /dev/hda1 from hda1.img and display debug information.
   partclone.restore -d -s hda1.img -o /dev/hda1
 
- restore image from clonezilla(split, gzip,) with stdin source 
+ restore image from clonezilla (split, gzip,) with stdin source 
   cat  sda1.ext3-ptcl-img.gz.a*  | gunzip -c | partclone.restore -d -s - -o /dev/sda1
 
  restore  raw  image  from  partclone.dd  

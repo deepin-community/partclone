@@ -1,5 +1,438 @@
-partclone (0.3.18.1-deepin) stable; urgency=medium
+partclone (0.3.27+repack-1) unstable; urgency=medium
 
-  * ['Autobuild release-candidate']
+  * New upstream version 0.3.27+repack
 
- -- Deepin Packages Builder <packages@deepin.org>  Wed, 10 Aug 2022 16:47:27 +0800
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 15 Oct 2023 19:38:47 +0200
+
+partclone (0.3.26+repack-1) unstable; urgency=medium
+
+  * New upstream version 0.3.26+repack
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sat, 30 Sep 2023 14:07:42 +0200
+
+partclone (0.3.25+repack-1) unstable; urgency=medium
+
+  * New upstream version 0.3.25+repack
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 07 Aug 2023 10:50:41 +0200
+
+partclone (0.3.24+repack-1) unstable; urgency=medium
+
+  * New upstream version 0.3.24+repack
+
+ -- Georges Khaznadar <georgesk@debian.org>  Tue, 25 Jul 2023 10:38:28 +0200
+
+partclone (0.3.23+repack-1) unstable; urgency=medium
+
+  * New upstream version 0.3.23+repack
+  * bumped Standards-Version: 4.6.1
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sat, 11 Feb 2023 18:15:32 +0100
+
+partclone (0.3.22+repack-1) unstable; urgency=medium
+
+  * New upstream version 0.3.22+repack
+
+ -- Georges Khaznadar <georgesk@debian.org>  Thu, 12 Jan 2023 17:55:51 +0100
+
+partclone (0.3.20+repack-1) unstable; urgency=medium
+
+  * changed the repack suffix
+  * New upstream version 0.3.20+repack
+
+ -- Georges Khaznadar <georgesk@debian.org>  Fri, 06 May 2022 18:54:03 +0200
+
+partclone (0.3.19~repack-1) unstable; urgency=medium
+
+  * new upstream version 0.3.19
+  * updated debian patches
+  * added a new build dependency, libmount-dev
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 11 Apr 2022 18:21:54 +0200
+
+partclone (0.3.18~repack-3) unstable; urgency=medium
+
+  * enabled NTFS again. Why did the --enable-ntfs option break the build
+    process two days ago?
+  * declared a build-dependency on ntfs-3g-dev
+
+ -- Georges Khaznadar <georgesk@debian.org>  Tue, 22 Mar 2022 10:27:08 +0100
+
+partclone (0.3.18~repack-2) unstable; urgency=medium
+
+  * fixed the target override_dh_auto_configure in debian/rules.
+    Closes: #1007975
+  * disable NTFS support
+  * made all --enable and --disable options explicitely for the configuration
+    in debian/rules
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 20 Mar 2022 15:53:00 +0100
+
+partclone (0.3.18~repack-1) unstable; urgency=medium
+
+  * new upstream version
+  * updated debian patches
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 06 Mar 2022 19:10:32 +0100
+
+partclone (0.3.17+dfsg-2) unstable; urgency=medium
+
+  * added Vcs stuff
+  * bumped debhelper-compat (= 13), Standards-Version: 4.6.0
+  * removed the useless dependency  dh-autoreconf
+  * merged the contents of the file debian/source comments into
+    debian/README.source
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 06 Mar 2022 18:34:26 +0100
+
+partclone (0.3.17+dfsg-1) unstable; urgency=medium
+
+  * new upstream version
+  * fixed a bad usage of wprintw in partclone.c. Closes: #997192
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 25 Oct 2021 16:23:54 +0200
+
+partclone (0.3.13+dfsg-6) unstable; urgency=medium
+
+  * applied nabijaczleweli's patches, Thanks! Closes: #958924
+
+ -- Georges Khaznadar <georgesk@debian.org>  Thu, 25 Mar 2021 19:00:52 +0100
+
+partclone (0.3.13+dfsg-5) unstable; urgency=medium
+
+  * modifications to comply with gcc-10: Closes: #957662
+  * updated configuration stuff for gettext
+  * made a stronger rule for d/rules clean : "rm -rf m4/"
+
+ -- Georges Khaznadar <georgesk@debian.org>  Fri, 17 Apr 2020 17:42:58 +0200
+
+partclone (0.3.13+dfsg-4) unstable; urgency=medium
+
+  * This revision is just to make a source upload
+
+ -- Georges Khaznadar <georgesk@debian.org>  Wed, 02 Oct 2019 16:58:37 +0200
+
+partclone (0.3.13+dfsg-3) unstable; urgency=medium
+
+  * removed the non-sensic $(DESTDIR) from d/rules, line 21,
+    thanks to Holger Schröder's bug report. Closes: #935932
+
+ -- Georges Khaznadar <georgesk@debian.org>  Wed, 28 Aug 2019 15:17:52 +0200
+
+partclone (0.3.13+dfsg-2) unstable; urgency=medium
+
+  [ Helmut Grohne ]
+  * Non-maintainer upload.
+  * Fix FTCBFS:
+    + Let dh_auto_configure pass --host to ./configure.
+    + cross.patch: Don't hard code the build architecture pkg-config
+
+  [ Georges Khaznadar ]
+  * adopted Helmut Grohne's patch, thanks! Closes: #935932
+
+ -- Helmut Grohne <helmut@subdivi.de>  Tue, 27 Aug 2019 20:38:00 +0200
+
+partclone (0.3.13+dfsg-1) unstable; urgency=medium
+
+  * New upstream version 0.3.13
+  * removed ELF files from the source package
+  * refreshed one debian patch
+  * updated Standards-Version: 4.3.0, debhelper (>= 11)
+  * set priority to optional
+  * added a build-dependency on libssl-dev
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 26 Aug 2019 14:37:10 +0200
+
+partclone (0.3.11+dfsg-1) unstable; urgency=medium
+
+  * removed the ELF file src/xfs/libxfs/crc32selftest
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 26 Aug 2019 14:13:55 +0200
+
+partclone (0.3.11-1) UNPUBLISHED; urgency=medium
+
+  * New upstream release
+  * Upgraded Standards-Version
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 23 Oct 2017 18:37:29 +0200
+
+partclone (0.3.8-1) unstable; urgency=medium
+
+  * New upstream release
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 09 Oct 2017 19:41:18 +0200
+
+partclone (0.3.6-2) unstable; urgency=medium
+
+  * new build, for sid.
+
+ -- Georges Khaznadar <georgesk@debian.org>  Tue, 20 Jun 2017 15:54:09 +0200
+
+partclone (0.3.6-1) experimental; urgency=medium
+
+  * New upstream release
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 18 Jun 2017 17:00:54 +0200
+
+partclone (0.2.90-2) experimental; urgency=medium
+
+  * Enabled XFS support back. Closes: #830535
+
+ -- Georges Khaznadar <georgesk@debian.org>  Thu, 11 May 2017 19:10:13 +0200
+
+partclone (0.2.90-1) experimental; urgency=medium
+
+  * New upstream release. Closes: #857966 (CVE-2017-6596)
+
+ -- Georges Khaznadar <georgesk@debian.org>  Wed, 29 Mar 2017 17:54:24 +0200
+
+partclone (0.2.89-2) unstable; urgency=medium
+
+  * added a dependency on libaal-dev >= 1.06-3. Closes: #842115
+
+ -- Georges Khaznadar <georgesk@debian.org>  Wed, 23 Nov 2016 18:25:53 +0100
+
+partclone (0.2.89-1) unstable; urgency=medium
+
+  * included Matthias Klose's patch. Closes: #842115
+  * upgraded to the new upstream release, which Closes: #825990
+  * upgraded Standards-Version: 3.9.8
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 13 Nov 2016 12:23:29 +0100
+
+partclone (0.2.88-1) unstable; urgency=medium
+
+  * upgraded to the newest upstream release
+  * upgraded Standards-Version to 3.9.7
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sat, 23 Apr 2016 19:21:57 +0200
+
+partclone (0.2.86-1) unstable; urgency=medium
+
+  * upgraded to the newest upstream release
+  * modified slightly configure.ac to cope with libreiser4 v. 1.1.0
+    Closes: #798937
+  * added a build-dependency on nilfs-tools
+  * modified debian/docs (README -> README.md)
+
+ -- Georges Khaznadar <georgesk@debian.org>  Thu, 17 Sep 2015 17:54:15 +0200
+
+partclone (0.2.78-3) unstable; urgency=medium
+
+  * removed an obsoleted patch
+  * updated d/copyright data
+  * restored two mandatory parameters which configure was missing
+
+ -- Georges Khaznadar <georgesk@debian.org>  Wed, 13 May 2015 16:08:09 +0200
+
+partclone (0.2.78-2) unstable; urgency=medium
+
+  * modified the build system to compile fail-mbr.bin only with x86
+    architectures.
+  * the binary file fail-mbr/fail-mbr.bin.orig is no longer removed, it used as
+    a comparison for successful builds, or as a file to copy for non-x86
+    architectures. The file fail-mbr/compile.sh does this job.
+  * documented this peculiarity in debian/README.source; Closes: #784975
+  * simplified d/rules by using "--with autoreconf" and d/control by using the
+    build-dependency on dh-autoreconf
+
+ -- Georges Khaznadar <georgesk@debian.org>  Wed, 13 May 2015 14:05:59 +0200
+
+partclone (0.2.78-1) unstable; urgency=medium
+
+  * upgraded to the newest upstream release
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sat, 09 May 2015 15:13:29 +0200
+
+partclone (0.2.76-1) unstable; urgency=medium
+
+  * upgraded to the newest upstream release
+  * Checked the build-dependency on libtnfs-3g-dev with pbuilder. Closes: #777249
+  * Removed the build-dependency on libreadline, which is a dependency for reiser4-dev
+  * Modified d/rules to skip the test suite
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 08 Feb 2015 19:10:53 +0100
+
+partclone (0.2.73-3) unstable; urgency=medium
+
+  * upgraded Standards-Version to 3.9.6
+  * recompiled the package. Closes: #765674
+
+ -- Georges Khaznadar <georgesk@debian.org>  Wed, 22 Oct 2014 17:14:25 +0200
+
+partclone (0.2.73-2) unstable; urgency=medium
+
+  * applied Ravindran Arani's patch. Closes: #761664
+  * added a build-dependency on autopoint
+
+ -- Georges Khaznadar <georgesk@debian.org>  Wed, 17 Sep 2014 18:45:14 +0200
+
+partclone (0.2.73-1) unstable; urgency=medium
+
+  * upgraded to the newest upstream release
+  * replaced the build-dependency libntfs-dev by ntfs-3g-dev
+    (Closes: #761255)
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 14 Sep 2014 17:16:58 +0200
+
+partclone (0.2.72-1) unstable; urgency=medium
+
+  * upgraded to the newest upstream release
+  * added a build-dependency on libblkid-dev
+
+ -- Georges Khaznadar <georgesk@debian.org>  Tue, 26 Aug 2014 12:59:02 +0200
+
+partclone (0.2.70-1) unstable; urgency=medium
+
+  * upgraded to the newest upstream release
+  * upgraded Standards-Version to 3.9.5
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sat, 25 Jan 2014 15:27:42 +0100
+
+partclone (0.2.69-1) unstable; urgency=medium
+
+  * upgraded to the newest upstream release
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sun, 05 Jan 2014 15:05:43 +0100
+
+partclone (0.2.68-1) unstable; urgency=low
+
+  * upgraded to the newest upstream release
+
+ -- Georges Khaznadar <georgesk@debian.org>  Wed, 25 Dec 2013 18:14:58 +0100
+
+partclone (0.2.66-2) unstable; urgency=low
+
+  * definitely prevented rebuild of fail-mbr's binaries by automatic means
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sat, 27 Jul 2013 21:41:01 +0200
+
+partclone (0.2.66-1) unstable; urgency=low
+
+  * upgraded to the newest upstream version
+  * modified Makefile.am to prevent building fail-mbr's binaries
+  * mentioned fail-mbr's binaries in debian/source/include-binaries
+  * modified debian/rules to install fail-mbr.bin
+
+ -- Georges Khaznadar <georgesk@debian.org>  Sat, 27 Jul 2013 16:53:50 +0200
+
+partclone (0.2.62-1) unstable; urgency=low
+
+  * changed my DEBEMAIL
+  * upgraded to the newest upstream version
+  * upgraded Standards-Version to 3.9.4
+  * upgraded debhelper level to 9
+  * added a build-depedency on the last gettext package. Ran "gettextize -f"
+    and adjusted configurations files so the source can be built in an
+    up-to-date environment. Closes: #713329
+  * modified fail-mbr/Makefile to define a path for included headers and
+    to fix a bug with the installation directory
+
+ -- Georges Khaznadar <georgesk@debian.org>  Mon, 24 Jun 2013 14:40:46 +0200
+
+partclone (0.2.56-1) unstable; urgency=low
+
+  * enabled xfs support.
+  * upgraded to the new upstream version
+
+ -- Georges Khaznadar <georgesk@ofset.org>  Mon, 20 Aug 2012 12:02:55 +0200
+
+partclone (0.2.51-1) unstable; urgency=low
+
+  * upgraded to the new upstream version
+
+ -- Georges Khaznadar <georgesk@ofset.org>  Sun, 19 Aug 2012 10:15:44 +0200
+
+partclone (0.2.49-1) unstable; urgency=low
+
+  * upgraded to the new upstream version
+  * restored the build-dependencies xsltproc, docbook-xsl
+  * activated dpkg-buildflags in debian/rules
+
+ -- Georges Khaznadar <georgesk@ofset.org>  Sun, 01 Jul 2012 12:11:06 +0200
+
+partclone (0.2.48-1) unstable; urgency=low
+
+  * upgraded to the newer upstream version
+
+ -- Georges Khaznadar <georgesk@ofset.org>  Sun, 13 May 2012 21:20:44 +0000
+
+partclone (0.2.46-1) unstable; urgency=low
+
+  * upgraded to the newer upstream version
+  * upgraded Standards-Version to 3.9.3
+
+ -- Georges Khaznadar <georgesk@ofset.org>  Thu, 12 Apr 2012 06:30:49 +0000
+
+partclone (0.2.43-1) unstable; urgency=low
+
+  * upgraded to the newer upstream version
+
+ -- Georges Khaznadar <georgesk@ofset.org>  Tue, 27 Dec 2011 19:21:55 +0100
+
+partclone (0.2.38-1) unstable; urgency=low
+
+  * upgraded to the newer upstream version
+
+ -- Georges Khaznadar <georgesk@ofset.org>  Sun, 04 Dec 2011 00:00:04 +0100
+
+partclone (0.2.33-1) unstable; urgency=low
+
+  * upgraded to the newer upstream version
+
+ -- Georges Khaznadar <georgesk@ofset.org>  Sun, 30 Oct 2011 02:27:44 +0200
+
+partclone (0.2.29-1) unstable; urgency=low
+
+  * upgraded to the newer upstream version
+
+ -- Georges Khaznadar <georgesk@ofset.org>  Mon, 19 Sep 2011 19:38:40 +0200
+
+partclone (0.2.27-1) unstable; urgency=low
+
+  * upgraded to the newer upstream version
+  * tested the compilation in a Sid chroot, which works, due to the 
+    availability of libreiser4-dev since the last NMU. Closes: #634543
+  * defined a versioned build-dependency on libreiser4-dev
+
+ -- Georges Khaznadar <georgesk@ofset.org>  Sun, 04 Sep 2011 16:32:35 +0200
+
+partclone (0.2.26-1) unstable; urgency=low
+
+  * upgraded to the newer upstream version
+  * fixed a few typos in the source of manpages
+  * applied the patch sent by Nameless <thenamelessnumerologist@gmail.com>
+    Closes: #636927
+
+ -- Georges Khaznadar <georgesk@ofset.org>  Fri, 26 Aug 2011 09:30:46 +0200
+
+partclone (0.2.22-3) unstable; urgency=low
+
+  * Closes: #623452 (the already fixed ITP)
+  * added a build-dependency on libreadline-gplv2-dev|libreadline5-dev,
+    which Closes: #634543
+
+ -- Georges Khaznadar <georgesk@ofset.org>  Tue, 19 Jul 2011 10:49:11 +0200
+
+partclone (0.2.22-2) unstable; urgency=low
+
+  * fixed debian/copyright, thanks to Luca Falavigna
+    included references to authors of third-party sources and mentioned
+    their FreedBSD-like license.
+
+ -- Georges Khaznadar <georgesk@ofset.org>  Tue, 28 Jun 2011 17:18:39 +0200
+
+partclone (0.2.22-1) unstable; urgency=low
+
+  * Initial release (Closes: #623452)
+  * removed the upstream's debian subdirectory, and taken some of its contents
+    as an input for the new debian subdirectory generated by dh_make
+  * refreshed the list of build-dependencies which had been defined by
+    upstream developers to take in account non-existent development libraries
+    for some filesystems in Debian
+  * modified configure.ac to disable those filesystems whose development
+    libraries are not in Debian, added a few rules to erase autoconf files
+    and rebuild them with autoreconf
+  * renamed partimage.manpages into partclone.manpages
+
+ -- Georges Khaznadar <georgesk@ofset.org>  Wed, 20 Apr 2011 15:56:52 +0200

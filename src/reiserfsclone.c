@@ -23,11 +23,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <linux/types.h>
-#ifdef REISERFS
- #include <reiserfs/reiserfs.h>
-#elif REISER4
- #include <reiser4/libreiser4.h>
-#endif
+#include <reiserfs/reiserfs.h>
 #include <dal/file_dal.h>
 #include "partclone.h"
 #include "reiserfsclone.h"
@@ -115,6 +111,7 @@ void read_super_blocks(char* device, file_system_info* fs_info)
     fs_info->block_size  = fs->super->s_v1.sb_block_size;
     fs_info->totalblock  = fs->super->s_v1.sb_block_count;
     fs_info->usedblocks  = fs->super->s_v1.sb_block_count - fs->super->s_v1.sb_free_blocks;
+    fs_info->superBlockUsedBlocks = fs_info->usedblocks;
     fs_info->device_size = fs_info->block_size * fs_info->totalblock;
     fs_close();
 }

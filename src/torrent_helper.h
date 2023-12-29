@@ -23,7 +23,10 @@
 #include <stdint.h>
 
 /* SHA1 for torrent info */
-#if defined(HAVE_EVP_MD_CTX_new) || defined(HAVE_EVP_MD_CTX_create)
+#if (defined(HAVE_EVP_MD_CTX_new) || defined(HAVE_EVP_MD_CTX_create)) && defined(HAVE_EVP_MD_CTX_reset)
+#define HAVE_EVP_MD_CTX_methods
+#endif
+#if defined(HAVE_EVP_MD_CTX_methods)
 #include <openssl/evp.h>
 #else
 #include <openssl/sha.h>
@@ -35,9 +38,9 @@ typedef struct {
 	unsigned long long PIECE_SIZE;
 	unsigned char hash[20]; /* SHA_DIGEST_LENGTH, only present in <openssl/sha.h> */
 	/* fd for torrent.info. You should close fd yourself */
-	int tinfo;
+	FILE *tinfo;
 	/* remember the length for a piece size */
-#if defined(HAVE_EVP_MD_CTX_new) || defined(HAVE_EVP_MD_CTX_create)
+#if defined(HAVE_EVP_MD_CTX_methods)
 	EVP_MD_CTX *ctx;
 #else
 	SHA_CTX ctx;
@@ -46,7 +49,7 @@ typedef struct {
 } torrent_generator;
 
 // init
-void torrent_init(torrent_generator *torrent, int tinfo);
+void torrent_init(torrent_generator *torrent, FILE *tinfo);
 // put or write data
 void torrent_update(torrent_generator *torrent, void *buffer, size_t length);
 // flush all sha1 hash for end
