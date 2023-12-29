@@ -37,13 +37,6 @@ struct progress_bar {
 };
 typedef struct progress_bar progress_bar;
 
-/**
- * GK 2020-04-17 : this variable is used in global space in C source files
- * main.c and xfsclone.c; so it must be declared as extern.
- * the global variable is actually defined in main.c, line 45.
- **/
-extern progress_bar prog;
-
 struct prog_stat_t{
     char Eformated[13];
     char Rformated[13];

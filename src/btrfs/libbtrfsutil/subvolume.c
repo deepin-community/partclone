@@ -5,7 +5,7 @@
  *
  * libbtrfsutil is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
+ * the Free Software Foundation, either version 2.1 of the License, or
  * (at your option) any later version.
  *
  * libbtrfsutil is distributed in the hope that it will be useful,
@@ -17,16 +17,17 @@
  * along with libbtrfsutil.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <sys/statfs.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <linux/magic.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/vfs.h>
-#include <linux/magic.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include "stubs.h"
 
 #include "btrfsutil_internal.h"
@@ -683,7 +684,7 @@ static enum btrfs_util_error openat_parent_and_name(int dirfd, const char *path,
 
 PUBLIC enum btrfs_util_error btrfs_util_create_subvolume(const char *path,
 							 int flags,
-							 uint64_t *async_transid,
+							 uint64_t *unused,
 							 struct btrfs_util_qgroup_inherit *qgroup_inherit)
 {
 	char name[BTRFS_SUBVOL_NAME_MAX + 1];
@@ -696,7 +697,7 @@ PUBLIC enum btrfs_util_error btrfs_util_create_subvolume(const char *path,
 		return err;
 
 	err = btrfs_util_create_subvolume_fd(parent_fd, name, flags,
-					    async_transid, qgroup_inherit);
+					    unused, qgroup_inherit);
 	SAVE_ERRNO_AND_CLOSE(parent_fd);
 	return err;
 }
@@ -704,7 +705,7 @@ PUBLIC enum btrfs_util_error btrfs_util_create_subvolume(const char *path,
 PUBLIC enum btrfs_util_error btrfs_util_create_subvolume_fd(int parent_fd,
 							    const char *name,
 							    int flags,
-							    uint64_t *async_transid,
+							    uint64_t *unused,
 							    struct btrfs_util_qgroup_inherit *qgroup_inherit)
 {
 	struct btrfs_ioctl_vol_args_v2 args = {};
@@ -716,8 +717,6 @@ PUBLIC enum btrfs_util_error btrfs_util_create_subvolume_fd(int parent_fd,
 		return BTRFS_UTIL_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (async_transid)
-		args.flags |= BTRFS_SUBVOL_CREATE_ASYNC;
 	if (qgroup_inherit) {
 		args.flags |= BTRFS_SUBVOL_QGROUP_INHERIT;
 		args.qgroup_inherit = (struct btrfs_qgroup_inherit *)qgroup_inherit;
@@ -737,9 +736,6 @@ PUBLIC enum btrfs_util_error btrfs_util_create_subvolume_fd(int parent_fd,
 	ret = ioctl(parent_fd, BTRFS_IOC_SUBVOL_CREATE_V2, &args);
 	if (ret == -1)
 		return BTRFS_UTIL_ERROR_SUBVOL_CREATE_FAILED;
-
-	if (async_transid)
-		*async_transid = args.transid;
 
 	return BTRFS_UTIL_OK;
 }
@@ -1022,8 +1018,7 @@ out_iter:
 }
 
 static enum btrfs_util_error snapshot_subvolume_children(int fd, int parent_fd,
-							 const char *name,
-							 uint64_t *async_transid)
+							 const char *name)
 {
 	struct btrfs_util_subvolume_iterator *iter;
 	enum btrfs_util_error err;
@@ -1041,7 +1036,6 @@ static enum btrfs_util_error snapshot_subvolume_children(int fd, int parent_fd,
 		char child_name[BTRFS_SUBVOL_NAME_MAX + 1];
 		char *child_path;
 		int child_fd, new_parent_fd;
-		uint64_t tmp_transid;
 
 		err = btrfs_util_subvolume_iterator_next(iter, &child_path,
 							 NULL);
@@ -1076,14 +1070,11 @@ static enum btrfs_util_error snapshot_subvolume_children(int fd, int parent_fd,
 
 		err = btrfs_util_create_snapshot_fd2(child_fd, new_parent_fd,
 						     child_name, 0,
-						     async_transid ? &tmp_transid : NULL,
-						     NULL);
+						     NULL, NULL);
 		SAVE_ERRNO_AND_CLOSE(child_fd);
 		SAVE_ERRNO_AND_CLOSE(new_parent_fd);
 		if (err)
 			break;
-		if (async_transid && tmp_transid > *async_transid)
-			*async_transid = tmp_transid;
 	}
 
 	btrfs_util_destroy_subvolume_iterator(iter);
@@ -1095,7 +1086,7 @@ out:
 PUBLIC enum btrfs_util_error btrfs_util_create_snapshot(const char *source,
 							const char *path,
 							int flags,
-							uint64_t *async_transid,
+							uint64_t *unused,
 							struct btrfs_util_qgroup_inherit *qgroup_inherit)
 {
 	enum btrfs_util_error err;
@@ -1105,7 +1096,7 @@ PUBLIC enum btrfs_util_error btrfs_util_create_snapshot(const char *source,
 	if (fd == -1)
 		return BTRFS_UTIL_ERROR_OPEN_FAILED;
 
-	err = btrfs_util_create_snapshot_fd(fd, path, flags, async_transid,
+	err = btrfs_util_create_snapshot_fd(fd, path, flags, unused,
 					    qgroup_inherit);
 	SAVE_ERRNO_AND_CLOSE(fd);
 	return err;
@@ -1114,7 +1105,7 @@ PUBLIC enum btrfs_util_error btrfs_util_create_snapshot(const char *source,
 PUBLIC enum btrfs_util_error btrfs_util_create_snapshot_fd(int fd,
 							   const char *path,
 							   int flags,
-							   uint64_t *async_transid,
+							   uint64_t *unused,
 							   struct btrfs_util_qgroup_inherit *qgroup_inherit)
 {
 	char name[BTRFS_SUBVOL_NAME_MAX + 1];
@@ -1127,7 +1118,7 @@ PUBLIC enum btrfs_util_error btrfs_util_create_snapshot_fd(int fd,
 		return err;
 
 	err = btrfs_util_create_snapshot_fd2(fd, parent_fd, name, flags,
-					     async_transid, qgroup_inherit);
+					     unused, qgroup_inherit);
 	SAVE_ERRNO_AND_CLOSE(parent_fd);
 	return err;
 }
@@ -1136,7 +1127,7 @@ PUBLIC enum btrfs_util_error btrfs_util_create_snapshot_fd2(int fd,
 							    int parent_fd,
 							    const char *name,
 							    int flags,
-							    uint64_t *async_transid,
+							    uint64_t *unused,
 							    struct btrfs_util_qgroup_inherit *qgroup_inherit)
 {
 	struct btrfs_ioctl_vol_args_v2 args = {.fd = fd};
@@ -1153,8 +1144,6 @@ PUBLIC enum btrfs_util_error btrfs_util_create_snapshot_fd2(int fd,
 
 	if (flags & BTRFS_UTIL_CREATE_SNAPSHOT_READ_ONLY)
 		args.flags |= BTRFS_SUBVOL_RDONLY;
-	if (async_transid)
-		args.flags |= BTRFS_SUBVOL_CREATE_ASYNC;
 	if (qgroup_inherit) {
 		args.flags |= BTRFS_SUBVOL_QGROUP_INHERIT;
 		args.qgroup_inherit = (struct btrfs_qgroup_inherit *)qgroup_inherit;
@@ -1175,12 +1164,8 @@ PUBLIC enum btrfs_util_error btrfs_util_create_snapshot_fd2(int fd,
 	if (ret == -1)
 		return BTRFS_UTIL_ERROR_SUBVOL_CREATE_FAILED;
 
-	if (async_transid)
-		*async_transid = args.transid;
-
 	if (flags & BTRFS_UTIL_CREATE_SNAPSHOT_RECURSIVE) {
-		err = snapshot_subvolume_children(fd, parent_fd, name,
-						  async_transid);
+		err = snapshot_subvolume_children(fd, parent_fd, name);
 		if (err)
 			return err;
 	}
@@ -1284,6 +1269,22 @@ PUBLIC enum btrfs_util_error btrfs_util_delete_subvolume_fd(int parent_fd,
 	args.name[len] = '\0';
 
 	ret = ioctl(parent_fd, BTRFS_IOC_SNAP_DESTROY, &args);
+	if (ret == -1)
+		return BTRFS_UTIL_ERROR_SNAP_DESTROY_FAILED;
+
+	return BTRFS_UTIL_OK;
+}
+
+PUBLIC enum btrfs_util_error btrfs_util_delete_subvolume_by_id_fd(int parent_fd,
+							    uint64_t subvolid)
+{
+	struct btrfs_ioctl_vol_args_v2 args = {};
+	int ret;
+
+	args.flags = BTRFS_SUBVOL_SPEC_BY_ID;
+	args.subvolid = subvolid;
+
+	ret = ioctl(parent_fd, BTRFS_IOC_SNAP_DESTROY_V2, &args);
 	if (ret == -1)
 		return BTRFS_UTIL_ERROR_SNAP_DESTROY_FAILED;
 
@@ -1453,8 +1454,16 @@ static enum btrfs_util_error subvolume_iterator_next_tree_search(struct btrfs_ut
 		name = (const char *)(ref + 1);
 		err = build_subvol_path_privileged(iter, header, ref, name,
 						   &path_len);
-		if (err)
+		if (err) {
+			/*
+			 * If the subvolume's parent directory doesn't exist,
+			 * then the subvolume was either moved or deleted. Skip
+			 * it.
+			 */
+			if (errno == ENOENT)
+				continue;
 			return err;
+		}
 
 		err = append_to_search_stack(iter,
 				btrfs_search_header_offset(header), path_len);
@@ -1523,8 +1532,12 @@ static enum btrfs_util_error subvolume_iterator_next_unprivileged(struct btrfs_u
 		err = build_subvol_path_unprivileged(iter, treeid, dirid,
 						     &path_len);
 		if (err) {
-			/* Skip the subvolume if we can't access it. */
-			if (errno == EACCES)
+			/*
+			 * If the subvolume's parent directory doesn't exist,
+			 * then the subvolume was either moved or deleted. Skip
+			 * it. Also skip it if we can't access it.
+			 */
+			if (errno == ENOENT || errno == EACCES)
 				continue;
 			return err;
 		}

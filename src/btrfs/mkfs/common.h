@@ -23,23 +23,52 @@
 #define __BTRFS_MKFS_COMMON_H__
 
 #include "kerncompat.h"
-#include "common-defs.h"
+#include <stdbool.h>
+#include "kernel-lib/sizes.h"
+#include "kernel-shared/ctree.h"
+#include "common/defs.h"
+#include "common/fsfeatures.h"
+
+struct btrfs_root;
+struct btrfs_trans_handle;
 
 #define BTRFS_MKFS_SYSTEM_GROUP_SIZE SZ_4M
 #define BTRFS_MKFS_SMALL_VOLUME_SIZE SZ_1G
 
 /*
+ * Default settings for block group types
+ */
+#define BTRFS_MKFS_DEFAULT_DATA_ONE_DEVICE	0	/* SINGLE */
+#define BTRFS_MKFS_DEFAULT_META_ONE_DEVICE	BTRFS_BLOCK_GROUP_DUP
+
+#define BTRFS_MKFS_DEFAULT_DATA_MULTI_DEVICE	0	/* SINGLE */
+#define BTRFS_MKFS_DEFAULT_META_MULTI_DEVICE	BTRFS_BLOCK_GROUP_RAID1
+
+/*
  * Tree root blocks created during mkfs
  */
 enum btrfs_mkfs_block {
-	MKFS_SUPER_BLOCK = 0,
 	MKFS_ROOT_TREE,
 	MKFS_EXTENT_TREE,
 	MKFS_CHUNK_TREE,
 	MKFS_DEV_TREE,
 	MKFS_FS_TREE,
 	MKFS_CSUM_TREE,
+	MKFS_FREE_SPACE_TREE,
+	MKFS_BLOCK_GROUP_TREE,
+
+	/* MKFS_BLOCK_COUNT should be the max blocks we can have at mkfs time. */
 	MKFS_BLOCK_COUNT
+};
+
+static const enum btrfs_mkfs_block default_blocks[] = {
+	MKFS_ROOT_TREE,
+	MKFS_EXTENT_TREE,
+	MKFS_CHUNK_TREE,
+	MKFS_DEV_TREE,
+	MKFS_FS_TREE,
+	MKFS_CSUM_TREE,
+	MKFS_FREE_SPACE_TREE,
 };
 
 struct btrfs_mkfs_config {
@@ -49,12 +78,13 @@ struct btrfs_mkfs_config {
 	u32 nodesize;
 	u32 sectorsize;
 	u32 stripesize;
-	/* Bitfield of incompat features, BTRFS_FEATURE_INCOMPAT_* */
-	u64 features;
+	u32 leaf_data_size;
+	struct btrfs_mkfs_features features;
 	/* Size of the filesystem in bytes */
 	u64 num_bytes;
 	/* checksum algorithm to use */
 	enum btrfs_csum_type csum_type;
+	u64 zone_size;
 
 	/* Output fields, set during creation */
 
@@ -68,6 +98,8 @@ struct btrfs_mkfs_config {
 };
 
 int make_btrfs(int fd, struct btrfs_mkfs_config *cfg);
+int btrfs_make_root_dir(struct btrfs_trans_handle *trans,
+			struct btrfs_root *root, u64 objectid);
 u64 btrfs_min_dev_size(u32 nodesize, int mixed, u64 meta_profile,
 		       u64 data_profile);
 int test_minimum_size(const char *file, u64 min_dev_size);

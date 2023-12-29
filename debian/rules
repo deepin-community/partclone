@@ -19,7 +19,25 @@ MAN8DIR = $(CURDIR)/debian/partclone/usr/share/man/man8
 
 override_dh_auto_configure:
 	./autogen
-	dh_auto_configure -- --prefix=/usr --enable-ncursesw --enable-all
+	# disable reiserfs
+	dh_auto_configure -- --prefix=/usr --enable-ncursesw \
+		--enable-xfs \
+		--enable-extfs \
+		--disable-reiserfs \
+		--enable-reiser4 \
+		--enable-hfsp \
+		--enable-apfs \
+		--enable-fat \
+		--enable-exfat \
+		--enable-ntfs \
+		--disable-ufs \
+		--disable-vmfs \
+		--disable-jfs \
+		--enable-btrfs \
+		--enable-minix \
+		--enable-f2fs \
+		--disable-nilfs2
+
 
 override_dh_clean: # keep the special file fail-mbr/fail-mbr.bin.orig
 	dh_clean
@@ -33,6 +51,7 @@ override_dh_clean: # keep the special file fail-mbr/fail-mbr.bin.orig
 	rm -f aclocal.m4
 	rm -f config.h.in
 	rm -f configure
+	rm -f config.log
 	rm -f docs/Makefile.in
 	rm -f fail-mbr/Makefile.in
 	rm -f ltmain.sh

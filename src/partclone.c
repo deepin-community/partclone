@@ -13,8 +13,12 @@
 
 
 #include <config.h>
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
+#ifndef _LARGEFILE64_SOURCE
 #define _LARGEFILE64_SOURCE
+#endif
 #include <features.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -53,6 +57,8 @@
 #define BLKGETSIZE64    _IOR(0x12,114,size_t)   /* Get device size in bytes. */
 #endif
 
+unsigned long long      rescue_write_size;
+
 FILE* msg = NULL;
 unsigned long long rescue_write_size;
 #ifdef HAVE_LIBNCURSESW
@@ -66,6 +72,14 @@ WINDOW *ptclscr_win;
 SCREEN *ptclscr;
 int log_y_line = 0;
 #endif
+
+#define OPT_OFFSET_DOMAIN  1000
+#define OPT_WRITE_DIRECT_IO 1001
+#define OPT_READ_DIRECT_IO 1002
+//
+//enum {
+//	OPT_OFFSET_DOMAIN = 1000
+//};
 
 /**
  * return the cpu architecture for which partclone is compiled
@@ -247,6 +261,8 @@ void usage(void) {
 #endif
 #ifndef CHKIMG
 		"    -I,  --ignore_fschk     Ignore filesystem check\n"
+                "         --write-direct-io  Writing data to TARGET partition without cache\n"
+                "         --read-direct-io   Reading data from SOURCE partition without cache\n"
 #endif
 		"    -i,  --ignore_crc       Ignore checksum error\n"
 		"    -F,  --force            Force progress\n"
@@ -294,9 +310,6 @@ int convert_to_checksum_mode(unsigned long mode) {
 	}
 }
 
-enum {
-	OPT_OFFSET_DOMAIN = 1000
-};
 
 const char *exec_name = "unset_name";
 
@@ -312,8 +325,6 @@ static void save_program_name(const char* argv0) {
 	if (last_slash != 0) {
 
 		exec_name = last_slash + 1;
-	} else {
-		exec_name = argv0;
 	}
 }
 
@@ -343,6 +354,8 @@ void parse_options(int argc, char **argv, cmd_opt* opt) {
 		{ "force",		no_argument,		NULL,   'F' },
 		{ "no_block_detail",	no_argument,		NULL,   'B' },
 		{ "buffer_size",	required_argument,	NULL,   'z' },
+		{ "write-direct-io",	no_argument,	        NULL,   OPT_WRITE_DIRECT_IO },
+		{ "read-direct-io",	no_argument,	        NULL,   OPT_READ_DIRECT_IO },
 // not RESTORE and not CHKIMG
 #ifndef CHKIMG
 #ifndef RESTORE
@@ -399,6 +412,8 @@ void parse_options(int argc, char **argv, cmd_opt* opt) {
 	opt->reseed_checksum = 1;
 	opt->blocks_per_checksum = 0;
 	opt->blockfile = 0;
+        opt->write_direct_io = 0;
+        opt->read_direct_io = 0;
 
 
 #ifdef DD
@@ -429,6 +444,12 @@ void parse_options(int argc, char **argv, cmd_opt* opt) {
 			case 'v':
 				print_version();
 				break;
+                        case OPT_WRITE_DIRECT_IO:
+                                opt->write_direct_io = 1;
+                                break;
+                        case OPT_READ_DIRECT_IO:
+                                opt->read_direct_io = 1;
+                                break;
 			case 'n':
 				memcpy(opt->note, optarg, NOTE_SIZE);
 				break;
@@ -611,15 +632,6 @@ void parse_options(int argc, char **argv, cmd_opt* opt) {
 		}
 
 	}
-
-#ifndef CHKIMG
-	if (opt->restore) {
-		if ((!strcmp(opt->target, "-")) || (!opt->target)) {
-			fprintf(stderr, "Partclone can't restore to stdout.\nFor help,type: %s -h\n", get_exec_name());
-			exit(0);
-		}
-	}
-#endif
 }
 
 /**
@@ -850,7 +862,7 @@ void log_mesg(int log_level, int log_exit, int log_stderr, int debug, const char
 			if (log_exit)
 				wattron(log_win, A_STANDOUT);
 
-			wprintw(log_win, tmp_str);
+			wprintw(log_win, "%s", tmp_str);
 
 			if (log_exit) {
 				wattroff(log_win, A_STANDOUT);
@@ -1227,7 +1239,7 @@ void update_used_blocks_count(file_system_info* fs_info, unsigned long* bitmap) 
 			++used;
 	}
 
-	fs_info->used_bitmap = used;
+	fs_info->usedblocks = used;
 }
 
 
@@ -1485,10 +1497,10 @@ int check_mount(const char* device, char* mount_p){
 		return -1;
 	}
 
-	if (!realpath(device, real_file)) {
-		free(real_fsname); real_fsname = NULL;
-        if (real_file){ free(real_file); real_file = NULL;}
-		return -1;
+	if (realpath(device, real_file) == NULL) {
+	    free(real_fsname); real_fsname = NULL;
+            if (real_file){ free(real_file); real_file = NULL;}
+	    return -1;
 	}
 
 	if ((f = setmntent(MOUNTED, "r")) == 0) {
@@ -1522,6 +1534,10 @@ int open_source(char* source, cmd_opt* opt) {
 
 	log_mesg(1, 0, 0, debug, "open source file/device %s\n", source);
 
+        if (opt->read_direct_io == 1){
+            flags = flags | O_DIRECT;
+        }
+
 	if (opt->ddd) {
 	    if (stat(source, &st_dev) != -1) {
 		if (S_ISBLK(st_dev.st_mode)) 
@@ -1545,6 +1561,10 @@ int open_source(char* source, cmd_opt* opt) {
 			log_mesg(0, 1, 1, debug, "error exit\n");
 		}
 		if (mp){ free(mp); mp = NULL;}
+
+                if (opt->read_direct_io == 1){
+                    flags = flags | O_DIRECT;
+                }
 
 		if ((ret = open(source, flags, S_IRUSR)) == -1)
 			log_mesg(0, 1, 1, debug, "clone: open %s error\n", source);
@@ -1572,6 +1592,10 @@ int open_target(char* target, cmd_opt* opt) {
 	int flags = O_WRONLY | O_LARGEFILE;
 	struct stat st_dev;
 	int ddd_block_device = -1;
+
+        if (opt->write_direct_io == 1){
+            flags = flags | O_DIRECT;
+        }
 
 	log_mesg(1, 0, 0, debug, "open target file/device %s\n", target);
 	if (opt->ddd) {
@@ -1616,13 +1640,16 @@ int open_target(char* target, cmd_opt* opt) {
 				log_mesg(0, 0, 1, debug, "open target fail %s: %s (%i)\n", target, strerror(errno), errno);
 			}
 		}
+	} else if (((opt->restore) || (opt->dd)) && (opt->blockfile == 0) && strcmp(target, "-") == 0) {
+	    if ((ret = fileno(stdout)) == -1)
+		log_mesg(0, 1, 1, debug, "clone: open %s(stdout) error\n", target);
 	} else if (((opt->restore) || (opt->dd) || (ddd_block_device == 1)) && (opt->blockfile == 0)) {    /// always is device, restore to device=target
 
 		/// check mounted
 		mp = malloc(PATH_MAX + 1);
 		if (!mp)
 			log_mesg(0, 1, 1, debug, "%s, %i, not enough memory\n", __func__, __LINE__);
-		if (check_mount(target, mp)) {
+		if (check_mount(target, mp) == 1) {
 			log_mesg(0, 0, 1, debug, "device (%s) is mounted at %s\n", target, mp);
 			free(mp); mp = NULL;
 			log_mesg(0, 1, 1, debug, "error exit\n");
@@ -1635,11 +1662,19 @@ int open_target(char* target, cmd_opt* opt) {
 		/// check block device
 		stat(target, &st_dev);
 		if (!S_ISBLK(st_dev.st_mode)) {
-			log_mesg(1, 0, 1, debug, "Warning, did you restore to non-block device(%s)?\n", target);
+                    if ((opt->dd) && (!opt->overwrite)){
+                        log_mesg(1, 0, 1, debug, "Warning, device(%s) not exist?! Use option --overwrite if you want to CREATE special file\n", target);
+			log_mesg(0, 1, 1, debug, "error exit\n");
+                    }
+                    log_mesg(1, 0, 1, debug, "Warning, you are doing restore to non-block device(%s)?\n", target);
 			flags |= O_CREAT;
 			if (!opt->overwrite)
 				flags |= O_EXCL;
 		}
+
+                if (opt->write_direct_io == 1){
+                    flags = flags | O_DIRECT;
+                }
 
 		if ((ret = open (target, flags, S_IRUSR)) == -1) {
 			if (errno == EEXIST) {
@@ -1773,6 +1808,56 @@ void rescue_sector(int *fd, unsigned long long pos, char *buff, cmd_opt *opt) {
 	}
 }
 
+long long skip_bytes(int *fd, char *empty_buffer, unsigned long long empty_buffer_size, unsigned long long empty_count, cmd_opt *opt) {
+	long long completed = 0;
+	int w_size;
+	if (empty_count == 0)
+		return 0;
+	if (empty_buffer == NULL) {
+		if (lseek(*fd, empty_count, SEEK_CUR) == (off_t)-1)
+			return -1;
+		return empty_count;
+	}
+	while (empty_buffer_size < empty_count - completed) {
+		w_size = write_all(fd, empty_buffer, empty_buffer_size, opt);
+		if (w_size < 0)
+			return w_size;
+		completed += w_size;
+		if (w_size != empty_buffer_size)
+			return completed;
+	}
+	w_size = write_all(fd, empty_buffer, empty_count - completed, opt);
+	if (w_size < 0)
+		return w_size;
+	completed += w_size;
+	return completed;
+}
+
+int skip_blocks(int *fd, char *empty_buffer, unsigned long long empty_buffer_size, unsigned long long empty_count, cmd_opt *opt, unsigned long long *block_id) {
+	unsigned long long i;
+	int w_size;
+	if (empty_count == 0)
+		return 0;
+	if (empty_buffer == NULL) {
+		if (lseek(*fd, empty_count * empty_buffer_size, SEEK_CUR) ==
+		    (off_t)-1)
+			return -1;
+		if (block_id)
+			*block_id += empty_count;
+		return 0;
+	}
+	for (i = 0; i < empty_count; i++) {
+		w_size = write_all(fd, empty_buffer, empty_buffer_size, opt);
+		if (w_size < 0)
+			return w_size;
+		if (w_size != empty_buffer_size)
+			return -1;
+		if (block_id)
+			++*block_id;
+	}
+	return 0;
+}
+
 /// print options to log file
 void print_opt(cmd_opt opt) {
 	int debug = opt.debug;
@@ -1831,7 +1916,7 @@ void print_partclone_info(cmd_opt opt) {
 		else
 		    log_mesg(0, 0, 1, debug, _("Starting to restore image (%s) to device (%s)\n"), opt.source, opt.target);
 	}else if(opt.dd)
-		log_mesg(0, 0, 1, debug, _("Starting to back up device(%s) to device(%s)\n"), opt.source, opt.target);
+		log_mesg(0, 0, 1, debug, _("Starting to back up device (%s) to device (%s)\n"), opt.source, opt.target);
 	else if (opt.domain)
 		log_mesg(0, 0, 1, debug, _("Starting to map device (%s) to domain log (%s)\n"), opt.source, opt.target);
 	else if (opt.ddd)
@@ -1842,7 +1927,7 @@ void print_partclone_info(cmd_opt opt) {
 	else if (opt.info)
 		log_mesg(0, 0, 1, debug, _("Showing info of image (%s)\n"), opt.source);
 	else
-		log_mesg(0, 0, 1, debug, "Unknown mode\n");
+		log_mesg(0, 0, 1, debug, _("Unknown mode\n"));
 	if ( strlen(opt.note) > 0 ){
 	    opt.note[NOTE_SIZE-1] = '\0';
 	    log_mesg(0, 0, 1, debug, "note: %s\n", opt.note);
@@ -1855,6 +1940,7 @@ void print_file_system_info(file_system_info fs_info, cmd_opt opt) {
 	unsigned int     block_s = fs_info.block_size;
 	unsigned long long total = fs_info.totalblock;
 	unsigned long long used  = fs_info.usedblocks;
+	unsigned long long superBlockUsedBlocks = fs_info.superBlockUsedBlocks;
 	int debug = opt.debug;
 	char size_str[11];
 
@@ -1873,6 +1959,7 @@ void print_file_system_info(file_system_info fs_info, cmd_opt opt) {
 	log_mesg(0, 0, 1, debug, _("Free Space:   %s = %llu Blocks\n"), size_str, (total-used));
 
 	log_mesg(0, 0, 1, debug, _("Block size:   %i Byte\n"), block_s);
+	log_mesg(2, 0, 1, debug, _("Used Blocks in Super-Block:   %llu Blocks\n"), superBlockUsedBlocks);
 }
 
 /// print image info

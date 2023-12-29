@@ -18,23 +18,27 @@
 #define __BTRFS_PATH_UTILS_H__
 
 #include <sys/types.h>
+#include <linux/limits.h>
 
-char *canonicalize_dm_name(const char *ptname);
-char *canonicalize_path(const char *path);
+char *path_canonicalize_dm_name(const char *ptname);
+char *path_canonicalize(const char *path);
 
 int arg_copy_path(char *dest, const char *src, int destlen);
+int path_cat_out(char *out, const char *p1, const char *p2);
+int path_cat3_out(char *out, const char *p1, const char *p2, const char *p3);
 
 char *__strncpy_null(char *dest, const char *src, size_t n);
 /* Helper to always get proper size of the destination string */
 #define strncpy_null(dest, src) __strncpy_null(dest, src, sizeof(dest))
 
 int path_is_block_device(const char *file);
-int path_is_mount_point(const char *file);
+int path_is_a_mount_point(const char *file);
 int path_exists(const char *file);
 int path_is_reg_file(const char *path);
 int path_is_dir(const char *path);
 int is_same_loop_file(const char *a, const char *b);
 int path_is_reg_or_block_device(const char *filename);
+int path_is_in_dir(const char *parent, const char *path);
 
 int test_issubvolname(const char *name);
 

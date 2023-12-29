@@ -18,21 +18,22 @@
  * Authors: Mark Fasheh <mfasheh@suse.de>
  */
 
+#include "kerncompat.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <uuid/uuid.h>
-#include "kerncompat.h"
-#include "kernel-lib/radix-tree.h"
-#include "ctree.h"
-#include "disk-io.h"
-#include "print-tree.h"
-#include "common/utils.h"
+#include <errno.h>
+#include "kernel-lib/list.h"
+#include "kernel-lib/rbtree.h"
+#include "kernel-lib/rbtree_types.h"
+#include "kernel-shared/ctree.h"
+#include "kernel-shared/disk-io.h"
 #include "kernel-shared/ulist.h"
+#include "kernel-shared/extent_io.h"
+#include "kernel-shared/transaction.h"
+#include "common/messages.h"
 #include "common/rbtree-utils.h"
-#include "transaction.h"
-#include "repair.h"
-
-#include "qgroup-verify.h"
+#include "check/repair.h"
+#include "check/qgroup-verify.h"
 
 static u64 *qgroup_item_count;
 
@@ -492,7 +493,7 @@ static int account_one_extent(struct ulist *roots, u64 bytenr, u64 num_bytes)
 		printf("account (%llu, %llu), qgroup %llu/%llu, rfer %llu,"
 		       " excl %llu, refs %llu, roots %llu\n", bytenr, num_bytes,
 		       btrfs_qgroup_level(count->qgroupid),
-		       btrfs_qgroup_subvid(count->qgroupid),
+		       btrfs_qgroup_subvolid(count->qgroupid),
 		       count->info.referenced, count->info.exclusive, nr_refs,
 		       nr_roots);
 #endif
@@ -579,7 +580,7 @@ static int account_all_refs(int do_qgroups, u64 search_subvol)
 	ulist_free(roots);
 	return 0;
 enomem:
-	error("Out of memory while accounting refs for qgroups");
+	error_msg(ERROR_MSG_MEMORY, "accounting for refs for qgroups");
 	return -ENOMEM;
 }
 
@@ -719,7 +720,8 @@ static int travel_tree(struct btrfs_fs_info *info, struct btrfs_root *root,
 //	printf("travel_tree: bytenr: %llu\tnum_bytes: %llu\tref_parent: %llu\n",
 //	       bytenr, num_bytes, ref_parent);
 
-	eb = read_tree_block(info, bytenr, 0);
+	eb = read_tree_block(info, bytenr, btrfs_root_id(root), 0,
+			     0, NULL);
 	if (!extent_buffer_uptodate(eb))
 		return -EIO;
 
@@ -743,7 +745,8 @@ static int travel_tree(struct btrfs_fs_info *info, struct btrfs_root *root,
 	 */
 	nr = btrfs_header_nritems(eb);
 	for (i = 0; i < nr; i++) {
-		(*qgroup_item_count)++;
+		if (qgroup_item_count)
+			(*qgroup_item_count)++;
 		new_bytenr = btrfs_node_blockptr(eb, i);
 		new_num_bytes = info->nodesize;
 
@@ -763,6 +766,10 @@ static int add_refs_for_implied(struct btrfs_fs_info *info, u64 bytenr,
 	u64 root_id = resolve_one_root(bytenr);
 	struct btrfs_root *root;
 	struct btrfs_key key;
+
+	/* If this is a global tree skip it. */
+	if (!is_fstree(root_id))
+		return 0;
 
 	/* Tree reloc tree doesn't contribute qgroup, skip it */
 	if (root_id == BTRFS_TREE_RELOC_OBJECTID)
@@ -864,12 +871,12 @@ static struct qgroup_count *alloc_count(struct btrfs_disk_key *key,
 		c->key = *key;
 
 		item = &c->diskinfo;
-		item->referenced = btrfs_qgroup_info_referenced(leaf, disk);
+		item->referenced = btrfs_qgroup_info_rfer(leaf, disk);
 		item->referenced_compressed =
-			btrfs_qgroup_info_referenced_compressed(leaf, disk);
-		item->exclusive = btrfs_qgroup_info_exclusive(leaf, disk);
+			btrfs_qgroup_info_rfer_cmpr(leaf, disk);
+		item->exclusive = btrfs_qgroup_info_excl(leaf, disk);
 		item->exclusive_compressed =
-			btrfs_qgroup_info_exclusive_compressed(leaf, disk);
+			btrfs_qgroup_info_excl_cmpr(leaf, disk);
 		INIT_LIST_HEAD(&c->groups);
 		INIT_LIST_HEAD(&c->members);
 		INIT_LIST_HEAD(&c->bad_list);
@@ -955,7 +962,7 @@ loop:
 
 	ret = btrfs_search_slot(NULL, root, &key, &path, 0, 0);
 	if (ret < 0) {
-		fprintf(stderr, "ERROR: Couldn't search slot: %d\n", ret);
+		error("couldn't search slot: %d", ret);
 		goto out;
 	}
 
@@ -972,7 +979,10 @@ loop:
 					ret = add_qgroup_relation(key.objectid,
 								  key.offset);
 					if (ret) {
-						error("out of memory");
+						errno = -ret;
+						error(
+		"failed to add qgroup relation, member=%llu parent=%llu: %m",
+						      key.objectid, key.offset);
 						goto out;
 					}
 				}
@@ -997,7 +1007,7 @@ loop:
 			count = alloc_count(&disk_key, leaf, item);
 			if (!count) {
 				ret = ENOMEM;
-				fprintf(stderr, "ERROR: out of memory\n");
+				error_msg(ERROR_MSG_MEMORY, NULL);
 				goto out;
 			}
 
@@ -1036,7 +1046,7 @@ static int add_inline_refs(struct btrfs_fs_info *info,
 	struct btrfs_extent_inline_ref *iref;
 	struct btrfs_extent_data_ref *dref;
 	u64 flags, root_obj, offset, parent;
-	u32 item_size = btrfs_item_size_nr(ei_leaf, slot);
+	u32 item_size = btrfs_item_size(ei_leaf, slot);
 	int type;
 	unsigned long end;
 	unsigned long ptr;
@@ -1152,7 +1162,7 @@ static int scan_extents(struct btrfs_fs_info *info,
 			u64 start, u64 end)
 {
 	int ret, i, nr, level;
-	struct btrfs_root *root = info->extent_root;
+	struct btrfs_root *root = btrfs_extent_root(info, start);
 	struct btrfs_key key;
 	struct btrfs_path path;
 	struct btrfs_disk_key disk_key;
@@ -1167,7 +1177,7 @@ static int scan_extents(struct btrfs_fs_info *info,
 
 	ret = btrfs_search_slot(NULL, root, &key, &path, 0, 0);
 	if (ret < 0) {
-		fprintf(stderr, "ERROR: Couldn't search slot: %d\n", ret);
+		error("couldn't search slot: %d", ret);
 		goto out;
 	}
 	path.reada = READA_BACK;
@@ -1237,8 +1247,7 @@ static int scan_extents(struct btrfs_fs_info *info,
 		ret = btrfs_next_leaf(root, &path);
 		if (ret != 0) {
 			if (ret < 0) {
-				fprintf(stderr,
-					"ERROR: Next leaf failed: %d\n", ret);
+				error("next leaf failed: %d", ret);
 				goto out;
 			}
 			break;
@@ -1284,9 +1293,9 @@ static int report_qgroup_difference(struct qgroup_count *count, int verbose)
 	is_different = excl_diff || ref_diff;
 
 	if (verbose || (is_different && qgroup_printable(count))) {
-		printf("Counts for qgroup id: %llu/%llu %s\n",
+		printf("Counts for qgroup id: %u/%llu %s\n",
 		       btrfs_qgroup_level(count->qgroupid),
-		       btrfs_qgroup_subvid(count->qgroupid),
+		       btrfs_qgroup_subvolid(count->qgroupid),
 		       is_different ? "are different" : "");
 
 		print_fields(info->referenced, info->referenced_compressed,
@@ -1310,54 +1319,38 @@ static int report_qgroup_difference(struct qgroup_count *count, int verbose)
 
 /*
  * Report qgroups errors
- * Return 0 if nothing wrong.
- * Return <0 if any qgroup is inconsistent.
- *
  * @all:	if set, all qgroup will be checked and reported even already
  * 		inconsistent or under rescan.
  */
-int report_qgroups(int all)
+void report_qgroups(int all)
 {
 	struct rb_node *node;
 	struct qgroup_count *c;
-	bool found_err = false;
-	bool skip_err = false;
 
-	if (!repair && counts.rescan_running) {
+	if (!opt_check_repair && counts.rescan_running) {
 		if (all) {
 			printf(
 	"Qgroup rescan is running, a difference in qgroup counts is expected\n");
 		} else {
 			printf(
 	"Qgroup rescan is running, qgroups will not be printed.\n");
-			return 0;
+			return;
 		}
 	}
 	/*
 	 * It's possible that rescan hasn't been initialized yet.
 	 */
-	if (counts.qgroup_inconsist && !counts.rescan_running &&
-	    counts.rescan_running == 0) {
-		printf(
-"Rescan hasn't been initialized, a difference in qgroup accounting is expected\n");
-		skip_err = true;
-	}
 	if (counts.qgroup_inconsist && !counts.rescan_running)
-		fprintf(stderr, "Qgroup are marked as inconsistent.\n");
+		printf(
+"Rescan hasn't been initialzied, a difference in qgroup accounting is expected\n");
 	node = rb_first(&counts.root);
 	while (node) {
 		c = rb_entry(node, struct qgroup_count, rb_node);
 
-		if (report_qgroup_difference(c, all)) {
-			list_add_tail(&c->bad_list, &bad_qgroups);
-			found_err = true;
-		}
+		report_qgroup_difference(c, all);
 
 		node = rb_next(node);
 	}
-	if (found_err && !skip_err)
-		return -EUCLEAN;
-	return 0;
 }
 
 void free_qgroup_counts(void)
@@ -1392,42 +1385,90 @@ void free_qgroup_counts(void)
 	}
 }
 
+static bool is_bad_qgroup(struct qgroup_count *count)
+{
+	struct qgroup_info *info = &count->info;
+	struct qgroup_info *disk = &count->diskinfo;
+	s64 excl_diff = info->exclusive - disk->exclusive;
+	s64 ref_diff = info->referenced - disk->referenced;
+
+	return (excl_diff || ref_diff);
+}
+
+/*
+ * Verify all qgroup numbers.
+ *
+ * Return <0 for fatal errors (e.g. ENOMEM or failed to read quota tree)
+ * Return 0 if all qgroup numbers are correct or no need to check (under rescan)
+ * Return >0 if qgroup numbers are inconsistent.
+ */
 int qgroup_verify_all(struct btrfs_fs_info *info)
 {
+	struct rb_node *n;
 	int ret;
+	bool found_err = false;
+	bool skip_err = false;
+	struct rb_node *node;
 
 	if (!info->quota_enabled)
 		return 0;
 
 	tree_blocks = ulist_alloc(0);
 	if (!tree_blocks) {
-		fprintf(stderr,
-			"ERROR: Out of memory while allocating ulist.\n");
+		error_msg(ERROR_MSG_MEMORY, "allocate ulist");
 		return ENOMEM;
 	}
 
 	ret = load_quota_info(info);
 	if (ret) {
-		fprintf(stderr, "ERROR: Loading qgroups from disk: %d\n", ret);
+		error("loading qgroups from disk: %d", ret);
 		goto out;
 	}
+
+	if (counts.rescan_running)
+		skip_err = true;
+	if (counts.qgroup_inconsist && !counts.rescan_running &&
+	    counts.rescan_running == 0)
+		skip_err = true;
 
 	/*
 	 * Put all extent refs into our rbtree
 	 */
-	ret = scan_extents(info, 0, ~0ULL);
-	if (ret) {
-		fprintf(stderr, "ERROR: while scanning extent tree: %d\n", ret);
-		goto out;
+	for (n = rb_first(&info->block_group_cache_tree); n; n = rb_next(n)) {
+		struct btrfs_block_group *bg;
+
+		bg = rb_entry(n, struct btrfs_block_group, cache_node);
+		ret = scan_extents(info, bg->start,
+				   bg->start + bg->length - 1);
+		if (ret) {
+			error("while scanning extent tree: %d", ret);
+			goto out;
+		}
 	}
 
 	ret = map_implied_refs(info);
 	if (ret) {
-		fprintf(stderr, "ERROR: while mapping refs: %d\n", ret);
+		error("while mapping refs: %d", ret);
 		goto out;
 	}
 
 	ret = account_all_refs(1, 0);
+
+	/*
+	 * Do the correctness check here, so for callers who don't want
+	 * verbose report can skip calling report_qgroups()
+	 */
+	node = rb_first(&counts.root);
+	while (node) {
+		struct qgroup_count *c;
+
+		c = rb_entry(node, struct qgroup_count, rb_node);
+		if (is_bad_qgroup(c)) {
+			list_add_tail(&c->bad_list, &bad_qgroups);
+			found_err = true;
+		}
+		node = rb_next(node);
+	}
 
 out:
 	/*
@@ -1436,6 +1477,8 @@ out:
 	 */
 	free_tree_blocks();
 	free_ref_tree(&by_bytenr);
+	if (!ret && !skip_err && found_err)
+		ret = 1;
 	return ret;
 }
 
@@ -1474,27 +1517,33 @@ static void print_subvol_info(u64 subvolid, u64 bytenr, u64 num_bytes,
 
 int print_extent_state(struct btrfs_fs_info *info, u64 subvol)
 {
+	struct rb_node *n;
 	int ret;
 
 	tree_blocks = ulist_alloc(0);
 	if (!tree_blocks) {
-		fprintf(stderr,
-			"ERROR: Out of memory while allocating ulist.\n");
+		error_msg(ERROR_MSG_MEMORY, "allocate ulist");
 		return ENOMEM;
 	}
 
 	/*
 	 * Put all extent refs into our rbtree
 	 */
-	ret = scan_extents(info, 0, ~0ULL);
-	if (ret) {
-		fprintf(stderr, "ERROR: while scanning extent tree: %d\n", ret);
-		goto out;
+	for (n = rb_first(&info->block_group_cache_tree); n; n = rb_next(n)) {
+		struct btrfs_block_group *bg;
+
+		bg = rb_entry(n, struct btrfs_block_group, cache_node);
+		ret = scan_extents(info, bg->start,
+				   bg->start + bg->length - 1);
+		if (ret) {
+			error("while scanning extent tree: %d", ret);
+			goto out;
+		}
 	}
 
 	ret = map_implied_refs(info);
 	if (ret) {
-		fprintf(stderr, "ERROR: while mapping refs: %d\n", ret);
+		error("while mapping refs: %d", ret);
 		goto out;
 	}
 
@@ -1508,7 +1557,7 @@ out:
 }
 
 static int repair_qgroup_info(struct btrfs_fs_info *info,
-			      struct qgroup_count *count)
+			      struct qgroup_count *count, bool silent)
 {
 	int ret;
 	struct btrfs_root *root = info->quota_root;
@@ -1517,8 +1566,10 @@ static int repair_qgroup_info(struct btrfs_fs_info *info,
 	struct btrfs_qgroup_info_item *info_item;
 	struct btrfs_key key;
 
-	printf("Repair qgroup %llu/%llu\n", btrfs_qgroup_level(count->qgroupid),
-	       btrfs_qgroup_subvid(count->qgroupid));
+	if (!silent)
+		printf("Repair qgroup %u/%llu\n",
+			btrfs_qgroup_level(count->qgroupid),
+			btrfs_qgroup_subvolid(count->qgroupid));
 
 	trans = btrfs_start_transaction(root, 1);
 	if (IS_ERR(trans))
@@ -1530,9 +1581,9 @@ static int repair_qgroup_info(struct btrfs_fs_info *info,
 	key.offset = count->qgroupid;
 	ret = btrfs_search_slot(trans, root, &key, &path, 0, 1);
 	if (ret) {
-		error("could not find disk item for qgroup %llu/%llu",
+		error("could not find disk item for qgroup %u/%llu",
 		      btrfs_qgroup_level(count->qgroupid),
-		      btrfs_qgroup_subvid(count->qgroupid));
+		      btrfs_qgroup_subvolid(count->qgroupid));
 		if (ret > 0)
 			ret = -ENOENT;
 		goto out;
@@ -1544,14 +1595,14 @@ static int repair_qgroup_info(struct btrfs_fs_info *info,
 	btrfs_set_qgroup_info_generation(path.nodes[0], info_item,
 					 trans->transid);
 
-	btrfs_set_qgroup_info_referenced(path.nodes[0], info_item,
+	btrfs_set_qgroup_info_rfer(path.nodes[0], info_item,
 					 count->info.referenced);
-	btrfs_set_qgroup_info_referenced_compressed(path.nodes[0], info_item,
+	btrfs_set_qgroup_info_rfer_cmpr(path.nodes[0], info_item,
 					    count->info.referenced_compressed);
 
-	btrfs_set_qgroup_info_exclusive(path.nodes[0], info_item,
+	btrfs_set_qgroup_info_excl(path.nodes[0], info_item,
 					count->info.exclusive);
-	btrfs_set_qgroup_info_exclusive_compressed(path.nodes[0], info_item,
+	btrfs_set_qgroup_info_excl_cmpr(path.nodes[0], info_item,
 					   count->info.exclusive_compressed);
 
 	btrfs_mark_buffer_dirty(path.nodes[0]);
@@ -1563,7 +1614,7 @@ out:
 	return ret;
 }
 
-static int repair_qgroup_status(struct btrfs_fs_info *info)
+static int repair_qgroup_status(struct btrfs_fs_info *info, bool silent)
 {
 	int ret;
 	struct btrfs_root *root = info->quota_root;
@@ -1572,7 +1623,8 @@ static int repair_qgroup_status(struct btrfs_fs_info *info)
 	struct btrfs_key key;
 	struct btrfs_qgroup_status_item *status_item;
 
-	printf("Repair qgroup status item\n");
+	if (!silent)
+		printf("Repair qgroup status item\n");
 
 	trans = btrfs_start_transaction(root, 1);
 	if (IS_ERR(trans))
@@ -1597,6 +1649,8 @@ static int repair_qgroup_status(struct btrfs_fs_info *info)
 	btrfs_set_qgroup_status_rescan(path.nodes[0], status_item, 0);
 	btrfs_set_qgroup_status_generation(path.nodes[0], status_item,
 					   trans->transid);
+	btrfs_set_qgroup_status_version(path.nodes[0], status_item,
+					BTRFS_QGROUP_STATUS_VERSION);
 
 	btrfs_mark_buffer_dirty(path.nodes[0]);
 
@@ -1607,18 +1661,18 @@ out:
 	return ret;
 }
 
-int repair_qgroups(struct btrfs_fs_info *info, int *repaired)
+int repair_qgroups(struct btrfs_fs_info *info, int *repaired, bool silent)
 {
 	int ret = 0;
 	struct qgroup_count *count, *tmpcount;
 
 	*repaired = 0;
 
-	if (!repair)
+	if (info->readonly)
 		return 0;
 
 	list_for_each_entry_safe(count, tmpcount, &bad_qgroups, bad_list) {
-		ret = repair_qgroup_info(info, count);
+		ret = repair_qgroup_info(info, count, silent);
 		if (ret) {
 			goto out;
 		}
@@ -1634,7 +1688,7 @@ int repair_qgroups(struct btrfs_fs_info *info, int *repaired)
 	 * mount.
 	 */
 	if (*repaired || counts.qgroup_inconsist || counts.rescan_running) {
-		ret = repair_qgroup_status(info);
+		ret = repair_qgroup_status(info, silent);
 		if (ret)
 			goto out;
 

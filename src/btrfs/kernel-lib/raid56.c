@@ -24,9 +24,9 @@
 #include <stdint.h>
 #include <unistd.h>
 #include "kerncompat.h"
-#include "ctree.h"
-#include "disk-io.h"
-#include "volumes.h"
+#include "kernel-shared/ctree.h"
+#include "kernel-shared/disk-io.h"
+#include "kernel-shared/volumes.h"
 #include "common/utils.h"
 #include "kernel-lib/raid56.h"
 
@@ -288,10 +288,8 @@ int raid56_recov(int nr_devs, size_t stripe_len, u64 profile, int dest1,
 	int min_devs;
 	int ret;
 
-	if (profile & BTRFS_BLOCK_GROUP_RAID5)
-		min_devs = 2;
-	else if (profile & BTRFS_BLOCK_GROUP_RAID6)
-		min_devs = 3;
+	if (profile & BTRFS_BLOCK_GROUP_RAID56_MASK)
+		min_devs = btrfs_bg_type_to_devs_min(profile);
 	else
 		return -EINVAL;
 	if (nr_devs < min_devs)
@@ -345,7 +343,7 @@ int raid56_recov(int nr_devs, size_t stripe_len, u64 profile, int dest1,
 		return raid6_recov_data2(nr_devs, stripe_len, dest1, dest2,
 					 data);
 	/* Data and P*/
-	if (dest2 == nr_devs - 1)
+	if (dest2 == nr_devs - 2)
 		return raid6_recov_datap(nr_devs, stripe_len, dest1, data);
 
 	/*

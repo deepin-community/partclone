@@ -1,4 +1,13 @@
-Format: http://dep.debian.net/deps/dep5
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Files-Excluded: m4
+ config.h.in
+ config.rpath
+ docs/partclone.8
+ install-sh
+ po/Makefile.in.in
+ po/POTFILES
+ test-driver
+
 Upstream-Name: partclone
 Source: http://sourceforge.net/projects/partclone/files/testing/partclone_0.2.22.tar.gz/download
 
